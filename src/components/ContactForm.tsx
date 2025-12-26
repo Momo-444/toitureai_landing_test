@@ -75,13 +75,24 @@ export default function ContactForm() {
             return;
         }
 
+        // Vérifier si le script est déjà chargé
+        if ((window as any).google?.maps?.places) {
+            return;
+        }
+
+        // Vérifier si un script Google Maps est déjà en cours de chargement
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com"]');
+        if (existingScript) {
+            return;
+        }
+
         const script = document.createElement("script");
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=fr&region=FR&callback=initMap`;
+        // Ajout de loading=async pour éviter le warning de performance
+        script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&language=fr&region=FR&loading=async&callback=initMap`;
         script.async = true;
-        script.defer = true;
 
         (window as any).initMap = () => {
-            console.log("Google Maps loaded");
+            // Script chargé
         };
 
         script.onerror = () => {
@@ -98,9 +109,6 @@ export default function ContactForm() {
 
         return () => {
             clearTimeout(timeout);
-            if (document.head.contains(script)) {
-                document.head.removeChild(script);
-            }
         };
     }, []);
 

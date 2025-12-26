@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useId } from 'react';
 
 interface TurnstileProps {
   onVerify: (token: string) => void;
@@ -13,6 +13,7 @@ declare global {
       remove: (widgetId: string) => void;
     };
     onTurnstileLoad?: () => void;
+    turnstileCallbacks?: Array<() => void>;
   }
 }
 
@@ -23,115 +24,119 @@ interface TurnstileOptions {
   theme?: 'light' | 'dark' | 'auto';
 }
 
-// Variable globale pour éviter les chargements multiples
+// Variables globales pour gérer le chargement du script
 let turnstileScriptLoaded = false;
 let turnstileScriptLoading = false;
 
 export function Turnstile({ onVerify, onError }: TurnstileProps) {
+  const uniqueId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
-  const mountedRef = useRef(true);
+  const hasRenderedRef = useRef(false);
 
   // Récupérer la sitekey de manière sûre
   const siteKey = typeof import.meta.env.PUBLIC_TURNSTILE_SITE_KEY === 'string'
+    && import.meta.env.PUBLIC_TURNSTILE_SITE_KEY.length > 0
     ? import.meta.env.PUBLIC_TURNSTILE_SITE_KEY
-    : '';
-
-  const renderWidget = useCallback(() => {
-    if (!containerRef.current || !window.turnstile || !siteKey || widgetIdRef.current) {
-      return;
-    }
-
-    try {
-      widgetIdRef.current = window.turnstile.render(containerRef.current, {
-        sitekey: siteKey,
-        callback: (token: string) => {
-          if (mountedRef.current) {
-            onVerify(token);
-          }
-        },
-        'error-callback': () => {
-          if (mountedRef.current && onError) {
-            onError();
-          }
-        },
-        theme: 'light',
-      });
-    } catch (error) {
-      console.error('Turnstile render error:', error);
-    }
-  }, [siteKey, onVerify, onError]);
+    : null;
 
   useEffect(() => {
-    mountedRef.current = true;
-
-    // Si pas de sitekey, ne rien faire
+    // Si pas de sitekey valide, ne rien faire
     if (!siteKey) {
-      console.log('Turnstile: No site key configured, skipping');
       return;
     }
 
-    // Si le script est déjà chargé, render directement
+    // Fonction de rendu du widget
+    const renderWidget = () => {
+      // Guards multiples contre le double render
+      if (!containerRef.current || !window.turnstile || hasRenderedRef.current || widgetIdRef.current) {
+        return;
+      }
+
+      // Vérifier que le container n'a pas déjà d'enfants (widget déjà rendu)
+      if (containerRef.current.children.length > 0) {
+        return;
+      }
+
+      hasRenderedRef.current = true;
+
+      try {
+        widgetIdRef.current = window.turnstile.render(containerRef.current, {
+          sitekey: siteKey,
+          callback: onVerify,
+          'error-callback': onError,
+          theme: 'light',
+        });
+      } catch (error) {
+        hasRenderedRef.current = false;
+        console.error('Turnstile render error:', error);
+      }
+    };
+
+    // Si le script est déjà chargé
     if (turnstileScriptLoaded && window.turnstile) {
-      renderWidget();
+      // Utiliser requestAnimationFrame pour s'assurer que le DOM est prêt
+      requestAnimationFrame(renderWidget);
       return;
     }
 
-    // Si le script est en cours de chargement, attendre
-    if (turnstileScriptLoading) {
-      const checkInterval = setInterval(() => {
-        if (turnstileScriptLoaded && window.turnstile) {
-          clearInterval(checkInterval);
-          renderWidget();
-        }
-      }, 100);
+    // Enregistrer le callback pour quand le script sera chargé
+    if (!window.turnstileCallbacks) {
+      window.turnstileCallbacks = [];
+    }
+    window.turnstileCallbacks.push(renderWidget);
 
-      return () => {
-        clearInterval(checkInterval);
-      };
+    // Si le script est déjà en cours de chargement, on attend juste
+    if (turnstileScriptLoading) {
+      return;
     }
 
     // Charger le script pour la première fois
     turnstileScriptLoading = true;
 
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad';
-    script.async = true;
-    script.defer = true;
-
+    // Définir le callback global AVANT de charger le script
     window.onTurnstileLoad = () => {
       turnstileScriptLoaded = true;
       turnstileScriptLoading = false;
-      if (mountedRef.current) {
-        renderWidget();
-      }
+      // Exécuter tous les callbacks enregistrés
+      const callbacks = window.turnstileCallbacks || [];
+      window.turnstileCallbacks = [];
+      callbacks.forEach(cb => requestAnimationFrame(cb));
     };
+
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad&render=explicit';
+    script.async = true;
 
     script.onerror = () => {
       turnstileScriptLoading = false;
       console.error('Failed to load Turnstile script');
-      if (mountedRef.current && onError) {
-        onError();
-      }
+      onError?.();
     };
 
     document.head.appendChild(script);
 
+    // Cleanup function
     return () => {
-      mountedRef.current = false;
-      // Cleanup widget si nécessaire
+      // Retirer le callback de la liste si pas encore exécuté
+      if (window.turnstileCallbacks) {
+        window.turnstileCallbacks = window.turnstileCallbacks.filter(cb => cb !== renderWidget);
+      }
+
+      // Supprimer le widget si rendu
       if (widgetIdRef.current && window.turnstile) {
         try {
           window.turnstile.remove(widgetIdRef.current);
-        } catch (e) {
+        } catch {
           // Ignorer les erreurs de cleanup
         }
         widgetIdRef.current = null;
       }
+      hasRenderedRef.current = false;
     };
-  }, [siteKey, renderWidget, onError]);
+  }, [siteKey, onVerify, onError]);
 
-  // Ne rien afficher si pas de sitekey
+  // Ne rien afficher si pas de sitekey valide
   if (!siteKey) {
     return null;
   }
@@ -139,8 +144,8 @@ export function Turnstile({ onVerify, onError }: TurnstileProps) {
   return (
     <div
       ref={containerRef}
+      id={`turnstile-container-${uniqueId}`}
       className="cf-turnstile flex justify-center my-4"
-      data-sitekey={siteKey}
     />
   );
 }
