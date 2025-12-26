@@ -1,0 +1,101 @@
+---
+const services = [
+	{
+		icon: '🔧',
+		title: 'Réparation de Toiture',
+		description: 'Intervention rapide pour fuites, tuiles cassées, gouttières endommagées. Diagnostic gratuit.',
+		features: ['Urgence 24/7', 'Garantie travaux', 'Devis gratuit']
+	},
+	{
+		icon: '🏠',
+		title: 'Rénovation Complète',
+		description: 'Réfection totale de votre toiture avec matériaux premium. Projet clé en main.',
+		features: ['Charpente', 'Couverture', 'Isolation']
+	},
+	{
+		icon: '🛡️',
+		title: 'Isolation Thermique',
+		description: 'Économisez jusqu\'à 30% sur vos factures énergétiques. Éligible aux aides de l\'État.',
+		features: ['Aides financières', 'RGE certifié', 'ROI rapide']
+	},
+	{
+		icon: '🔨',
+		title: 'Installation Neuve',
+		description: 'Construction neuve ou extension ? Nous créons votre toiture sur-mesure.',
+		features: ['Sur-mesure', 'Tous matériaux', 'Garantie 10 ans']
+	},
+	{
+		icon: '✅',
+		title: 'Entretien & Maintenance',
+		description: 'Prolongez la durée de vie de votre toiture avec un entretien régulier professionnel.',
+		features: ['Nettoyage', 'Démoussage', 'Inspection']
+	},
+	{
+		icon: '⚡',
+		title: 'Dépannage Urgent',
+		description: 'Fuite d\'eau ? Tempête ? Intervention d\'urgence sous 2h dans le Grand Est.',
+		features: ['Disponible 24/7', 'Intervention rapide', 'Bâchage provisoire']
+	}
+];
+---
+
+<section class="section-container bg-gradient-to-b from-white to-primary-50/30">
+	<div class="text-center mb-16">
+		<span class="badge-premium text-base mb-4">Nos Services</span>
+		<h2 class="text-4xl md:text-5xl font-display font-bold text-primary-900 mb-6">
+			Une Expertise <span class="gradient-text">Complète</span>
+		</h2>
+		<p class="text-xl text-primary-600 max-w-2xl mx-auto">
+			De la simple réparation à la rénovation complète, nous accompagnons tous vos projets de couverture
+		</p>
+	</div>
+	
+	<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+		{services.map((service, index) => (
+			<div 
+				class="glass-card p-8 card-hover group"
+				style={`animation: slideUp 0.6s ease-out ${index * 0.1}s backwards`}
+			>
+				<!-- Icon -->
+				<div class="text-6xl mb-6 transform group-hover:scale-110 transition-transform duration-300">
+					{service.icon}
+				</div>
+				
+				<!-- Title -->
+				<h3 class="text-2xl font-display font-bold text-primary-900 mb-4">
+					{service.title}
+				</h3>
+				
+				<!-- Description -->
+				<p class="text-primary-600 mb-6 leading-relaxed">
+					{service.description}
+				</p>
+				
+				<!-- Features -->
+				<ul class="space-y-2">
+					{service.features.map(feature => (
+						<li class="flex items-center gap-2 text-primary-700">
+							<svg class="w-5 h-5 text-accent-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+							</svg>
+							<span>{feature}</span>
+						</li>
+					))}
+				</ul>
+				
+				<!-- Hover gradient border effect -->
+				<div class="absolute inset-0 rounded-3xl bg-gradient-to-r from-accent-500/0 via-accent-500/20 to-secondary-500/0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"></div>
+			</div>
+		))}
+	</div>
+	
+	<!-- CTA -->
+	<div class="text-center mt-16">
+		<a href="#formulaire" class="btn-gradient inline-flex items-center gap-2">
+			<span>Demander un Devis Gratuit</span>
+			<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+				<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+			</svg>
+		</a>
+	</div>
+</section>
