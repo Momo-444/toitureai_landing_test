@@ -1,0 +1,6 @@
+# ToitureAI - Expert Couvreur Grand Est
+User-agent: *
+Allow: /
+
+# Sitemap
+Sitemap: https://www.toitureai.fr/sitemap.xml
